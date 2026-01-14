@@ -1,0 +1,58 @@
+@RoleClaimsApp_HostAddress = http://localhost:5069
+
+###
+POST {{RoleClaimsApp_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "Password123!"
+}
+> {%
+    client.global.set("accessToken", response.body.accessToken);
+    client.global.set("refreshToken", response.body.refreshToken);
+%}
+
+### Call IT endpoint with JWT
+GET {{RoleClaimsApp_HostAddress}}/api/users/it
+Authorization: Bearer {{accessToken}}
+
+### Call Admin endpoint with JWT
+GET {{RoleClaimsApp_HostAddress}}/api/users/admin
+Authorization: Bearer {{accessToken}}
+
+### Remove Department claim
+DELETE {{RoleClaimsApp_HostAddress}}/api/users/claims/department
+Authorization: Bearer {{accessToken}}
+
+### Re-add Department claim
+POST http://localhost:5069/api/admin/users/admin/claims
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "type": "Department",
+  "value": "IT"
+}
+
+### Refresh access token
+POST http://localhost:5069/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+> {%
+    client.global.set("accessToken", response.body.accessToken);
+    client.global.set("refreshToken", response.body.refreshToken);
+%}
+
+### Logout
+POST http://localhost:5069/api/auth/logout
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
