@@ -10,23 +10,34 @@ namespace RoleClaimsApp.Security;
 
 public class TokenService
 {
-    private readonly IConfiguration _config;
+    private readonly string _jwtKey;
+    private readonly string _issuer;
+    private readonly string _audience;
+    private readonly int _accessTokenMinutes;
 
     public TokenService(IConfiguration config)
     {
-        _config = config;
+        _jwtKey = config.GetValue<string>("Jwt:Key")
+                  ?? throw new InvalidOperationException("JWT key not configured");
+        _issuer = config.GetValue<string>("Jwt:Issuer")
+                  ?? throw new InvalidOperationException("JWT issuer not configured");
+        _audience = config.GetValue<string>("Jwt:Audience")
+                    ?? throw new InvalidOperationException("JWT audience not configured");
+        _accessTokenMinutes = config.GetValue<int>("Jwt:AccessTokenMinutes", 10);
     }
 
     public string CreateAccessToken(IEnumerable<Claim> claims)
     {
         var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+            Encoding.UTF8.GetBytes(_jwtKey));
+        
+        var accessMinutes = _accessTokenMinutes;
 
         var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
+            issuer: _issuer,
+            audience: _audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(10),
+            expires: DateTime.UtcNow.AddMinutes(accessMinutes),
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
         );
 

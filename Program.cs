@@ -9,27 +9,26 @@ using RoleClaimsApp.Data;
 using RoleClaimsApp.Models;
 using RoleClaimsApp.Security;
 
-var jwtKey = "THIS_IS_A_DEMO_SECRET_KEY_CHANGE_LATER";
-var jwtIssuer = "RoleClaimsApp";
-var jwtAudience = "RoleClaimsAppClient";
+
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add token service
-builder.Services.AddScoped<TokenService>();
-
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+var jwtKey = builder.Configuration.GetValue<string>("Jwt:Key") 
+             ?? throw new InvalidOperationException("JWT key is not configured");
+
+var jwtIssuer = builder.Configuration.GetValue<string>("Jwt:Issuer");
+var jwtAudience = builder.Configuration.GetValue<string>("Jwt:Audience");
+
+
+// Add token services
+builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<RefreshTokenService>();
 
 // Controllers
 builder.Services.AddControllers();
 
-// Database (In-Memory for demo)
-// builder.Services.AddDbContext<ApplicationDbContext>(options => 
-//     options.UseInMemoryDatabase("UserDirectoryDb")
-// );
-// Postgres
+// Database - Postgres
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -61,7 +60,7 @@ builder.Services.AddAuthorization(options =>
     AuthorizationPolicies.AddPolicies(options);
 });
 
-// Fake authentication for assignment
+// JWT authentication setup
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -91,57 +90,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.Use(async (context, next) =>
-{
-    Console.WriteLine("----- REQUEST START -----");
-
-    Console.WriteLine($"Path: {context.Request.Path}");
-    Console.WriteLine($"Method: {context.Request.Method}");
-
-    Console.WriteLine($"User authenticated: {context.User?.Identity?.IsAuthenticated}");
-
-    if (context.User?.Claims != null)
-    {
-        foreach (var claim in context.User.Claims)
-        {
-            Console.WriteLine($"Claim BEFORE auth: {claim.Type} = {claim.Value}");
-        }
-    }
-
-    await next();
-
-    Console.WriteLine($"Response: {context.Response.Headers}");
-    Console.WriteLine("----- REQUEST END -----");
-    Console.WriteLine($"Response status: {context.Response.StatusCode}");
-});
-
 app.UseRouting();
 app.UseAuthentication();
-
-app.Use(async (context, next) =>
-{
-    Console.WriteLine("----- AFTER AUTHENTICATION -----");
-    Console.WriteLine($"User authenticated: {context.User.Identity?.IsAuthenticated}");
-    Console.WriteLine($"User name: {context.User.Identity?.Name}");
-
-    foreach (var claim in context.User.Claims)
-    {
-        Console.WriteLine($"Claim AFTER auth: {claim.Type} = {claim.Value}");
-    }
-
-    await next();
-});
-
 app.UseAuthorization();
-
-app.Use(async (context, next) =>
-{
-    Console.WriteLine("----- AFTER AUTHORIZATION -----");
-    Console.WriteLine($"Endpoint: {context.GetEndpoint()?.DisplayName}");
-    Console.WriteLine($"Response status so far: {context.Response.StatusCode}");
-
-    await next();
-});
 
 app.MapControllers();
 
