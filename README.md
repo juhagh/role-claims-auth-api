@@ -68,6 +68,30 @@ This mirrors how many real-world APIs implement session control.
 
 ---
 
+## Configuration & Secrets
+
+### JWT Configuration
+
+The JWT signing key is **not committed to source control**.
+
+For local development, the key should be provided via an environment variable:
+
+```bash
+# Windows (PowerShell)
+$env:Jwt__Key="YOUR_DEV_SECRET_KEY"
+
+# Linux / macOS
+export Jwt__Key="YOUR_DEV_SECRET_KEY"
+```
+
+The value in `appsettings.json` is a **non-functional placeholder** intended only to document required configuration.
+
+### Database Configuration
+
+The PostgreSQL connection string in `appsettings.json` is intended for **local development only** and points to a database running on `localhost`.
+
+---
+
 ## Example Authorization Endpoints
 
 - `GET /api/users/admin`  
