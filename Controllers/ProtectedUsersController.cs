@@ -7,10 +7,18 @@ using RoleClaimsApp.Models;
 
 namespace RoleClaimsApp.Controllers;
 
+/// <summary>
+/// Demonstrates role-based and claim-based authorization
+/// using policy-based access control.
+/// </summary>
 [ApiController]
 [Route("api/users")]
 public class ProtectedUsersController : ControllerBase
 {
+    /// <summary>
+    /// Endpoint accessible only to users with the Admin role.
+    /// </summary>
+    /// <returns>Confirmation of Admin access.</returns>
     [Authorize(
         Policy = AuthorizationPolicies.AdminOnly
     )]
@@ -24,6 +32,10 @@ public class ProtectedUsersController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Endpoint accessible only to users with the Department=IT claim.
+    /// </summary>
+    /// <returns>Confirmation of IT department access.</returns>
     [Authorize(
         Policy = AuthorizationPolicies.ITDepartmentOnly
     )]

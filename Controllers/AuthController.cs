@@ -7,6 +7,10 @@ using RoleClaimsApp.Security;
 
 namespace RoleClaimsApp.Controllers;
 
+/// <summary>
+/// Handles authentication-related operations including login,
+/// access token refresh, and logout.
+/// </summary>
 [ApiController]
 [Route("api/auth")]
 public class AuthController : ControllerBase
@@ -26,6 +30,12 @@ public class AuthController : ControllerBase
         _refreshTokenService = refreshTokenService;
     }
     
+    /// <summary>
+    /// Authenticates a user using username and password credentials.
+    /// Issues a short-lived JWT access token and a long-lived refresh token.
+    /// </summary>
+    /// <param name="request">Login credentials.</param>
+    /// <returns>JWT access token and refresh token.</returns>
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest request)
     {
@@ -63,6 +73,12 @@ public class AuthController : ControllerBase
         });
     }
     
+    /// <summary>
+    /// Refreshes an expired or soon-to-expire access token using a valid refresh token.
+    /// Performs refresh token rotation and reissues updated claims.
+    /// </summary>
+    /// <param name="request">Refresh token request.</param>
+    /// <returns>New JWT access token and rotated refresh token.</returns>
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
     {
@@ -97,7 +113,12 @@ public class AuthController : ControllerBase
         });
     }
 
-    
+    /// <summary>
+    /// Logs out the current user by revoking all active refresh tokens
+    /// associated with the user account.
+    /// </summary>
+    /// <param name="request">Logout request containing the refresh token.</param>
+    /// <returns>Logout confirmation.</returns>
     [HttpPost("logout")]
     public async Task<IActionResult> Logout(LogoutRequest request)
     {

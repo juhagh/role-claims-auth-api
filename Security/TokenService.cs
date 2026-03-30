@@ -8,6 +8,10 @@ using System.Text;
 
 namespace RoleClaimsApp.Security;
 
+/// <summary>
+/// Responsible for generating and signing JWT access tokens
+/// and producing cryptographically secure refresh tokens.
+/// </summary>
 public class TokenService
 {
     private readonly string _jwtKey;
@@ -26,6 +30,11 @@ public class TokenService
         _accessTokenMinutes = config.GetValue<int>("Jwt:AccessTokenMinutes", 10);
     }
 
+    /// <summary>
+    /// Creates a signed JWT access token containing user claims and roles.
+    /// </summary>
+    /// <param name="claims">Claims to embed in the token.</param>
+    /// <returns>Serialized JWT access token.</returns>
     public string CreateAccessToken(IEnumerable<Claim> claims)
     {
         var key = new SymmetricSecurityKey(
@@ -44,6 +53,10 @@ public class TokenService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    /// <summary>
+    /// Generates a cryptographically strong random refresh token.
+    /// </summary>
+    /// <returns>Opaque refresh token string.</returns>
     public string GenerateRefreshToken()
     {
         return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));

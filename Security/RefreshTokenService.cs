@@ -3,6 +3,10 @@ using RoleClaimsApp.Models;
 
 namespace RoleClaimsApp.Security;
 
+/// <summary>
+/// Manages refresh token lifecycle including creation, validation,
+/// rotation, and revocation.
+/// </summary>
 public class RefreshTokenService
 {
     private readonly int _refreshTokenDays;
@@ -15,6 +19,9 @@ public class RefreshTokenService
                             ?? throw new InvalidOperationException("Refresh token expiry not configured");
     }
     
+    /// <summary>
+    /// Creates an initial refresh token for a newly authenticated user.
+    /// </summary>
     public async Task CreateInitialTokenAsync(
         string userId,
         string tokenHash
@@ -70,6 +77,10 @@ public class RefreshTokenService
         await _db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Rotates an existing refresh token by revoking the old token
+    /// and issuing a new one.
+    /// </summary>
     public async Task<RefreshToken> RotateTokenAsync(
         RefreshToken oldToken,
         string newTokenHash)
