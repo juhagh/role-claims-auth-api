@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: roleclaimsdb
+          POSTGRES_USER: appuser
+          POSTGRES_PASSWORD: apppassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U appuser -d roleclaimsdb"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Add .NET tools to PATH
+        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build solution
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Apply database migrations
+        env:
+          ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=roleclaimsdb;Username=appuser;Password=apppassword
+          Jwt__Key: dev-ci-secret-key-at-least-32-characters-long
+          Jwt__Issuer: RoleClaimsApp
+          Jwt__Audience: RoleClaimsAppClient
+          Jwt__AccessTokenMinutes: 10
+          Jwt__RefreshTokenDays: 7
+        run: dotnet ef database update --project RoleClaimsApp.csproj
