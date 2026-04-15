@@ -1,3 +1,12 @@
+[![CI](https://github.com/juhagh/role-claims-auth-api/actions/workflows/ci.yml/badge.svg)](https://github.com/juhagh/role-claims-auth-api/actions/workflows/ci.yml)
+[![.NET](https://img.shields.io/badge/.NET-9-512BD4?logo=dotnet)](https://dotnet.microsoft.com)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com)
+[![JWT](https://img.shields.io/badge/Auth-JWT-black?logo=jsonwebtokens)](https://jwt.io)
+[![Identity](https://img.shields.io/badge/ASP.NET-Identity-512BD4?logo=dotnet)](https://learn.microsoft.com/aspnet/core/security/authentication/identity)
+[![RBAC](https://img.shields.io/badge/Authorization-RBAC%20%2B%20Claims-green)](https://learn.microsoft.com/aspnet/core/security/authorization/policies)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
 # RoleClaimsApp
 
 An ASP.NET Core Web API that demonstrates authentication and authorization patterns commonly used in real backend systems, including JWT access tokens, refresh token rotation, ASP.NET Core Identity, and policy-based access control using roles and claims.
