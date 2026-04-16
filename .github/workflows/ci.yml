@@ -11,16 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      postgres:
+      postgres-test:
         image: postgres:16
         env:
-          POSTGRES_DB: roleclaimsdb
+          POSTGRES_DB: roleclaimstestdb
           POSTGRES_USER: appuser
           POSTGRES_PASSWORD: apppassword
         ports:
-          - 5432:5432
+          - 5433:5432
         options: >-
-          --health-cmd="pg_isready -U appuser -d roleclaimsdb"
+          --health-cmd="pg_isready -U appuser -d roleclaimstestdb"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
@@ -34,24 +34,11 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Add .NET tools to PATH
-        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-
-      - name: Install dotnet-ef
-        run: dotnet tool install --global dotnet-ef
-
       - name: Restore dependencies
         run: dotnet restore
 
       - name: Build solution
         run: dotnet build --no-restore --configuration Release
 
-      - name: Apply database migrations
-        env:
-          ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=roleclaimsdb;Username=appuser;Password=apppassword
-          Jwt__Key: dev-ci-secret-key-at-least-32-characters-long
-          Jwt__Issuer: RoleClaimsApp
-          Jwt__Audience: RoleClaimsAppClient
-          Jwt__AccessTokenMinutes: 10
-          Jwt__RefreshTokenDays: 7
-        run: dotnet ef database update --project src/RoleClaimsApp/RoleClaimsApp.csproj
+      - name: Run tests
+        run: dotnet test --no-build --configuration Release --verbosity normal

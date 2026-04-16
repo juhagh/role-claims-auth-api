@@ -1,5 +1,5 @@
 ﻿services:
-  postgres:
+  postgres-dev:
     image: postgres:16
     container_name: roleclaimsapp-postgres
     environment:
@@ -14,17 +14,32 @@
       timeout: 5s
       retries: 5
 
+  postgres-test:
+    image: postgres:16
+    container_name: roleclaimsapp-test-postgres
+    environment:
+      POSTGRES_DB: roleclaimstestdb
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppassword
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: roleclaimsapp-api
     depends_on:
-      postgres:
+      postgres-dev:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=roleclaimsdb;Username=appuser;Password=apppassword
+      ConnectionStrings__DefaultConnection: Host=postgres-dev;Port=5432;Database=roleclaimsdb;Username=appuser;Password=apppassword
       Jwt__Key: YVWgQrQqMRrrLytIYxo5DgJnUk2Uu3vkYH6KXxTErOnWAdym/T6aXM0TthJSB9/4gflYnyasNjvunzR9ErgCNQ== # Dev only - replace with a secure secret in production
       Jwt__Issuer: RoleClaimsApp
       Jwt__Audience: RoleClaimsAppClient
