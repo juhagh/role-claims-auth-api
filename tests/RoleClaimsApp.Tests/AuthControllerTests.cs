@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -107,7 +108,6 @@ public class AuthControllerTests : IClassFixture<RoleClaimsWebApplicationFactory
         var tokens = await LoginAsync("admin", "Password123!");
         Assert.False(string.IsNullOrWhiteSpace(tokens.AccessToken));
         Assert.False(string.IsNullOrWhiteSpace(tokens.RefreshToken));
-        var oldAccessToken = tokens.AccessToken;
         var oldRefreshToken = tokens.RefreshToken;
         var refreshRequest = new RefreshRequest(RefreshToken: oldRefreshToken);
         
@@ -118,7 +118,6 @@ public class AuthControllerTests : IClassFixture<RoleClaimsWebApplicationFactory
         Assert.NotNull(newTokens);
         Assert.False(string.IsNullOrWhiteSpace(newTokens.AccessToken));
         Assert.False(string.IsNullOrWhiteSpace(newTokens.RefreshToken));
-        // Assert.NotEqual(newTokens.AccessToken, oldAccessToken); // returns same accesToken, add jti?
         Assert.NotEqual(newTokens.RefreshToken, oldRefreshToken);
     }
     
@@ -129,7 +128,6 @@ public class AuthControllerTests : IClassFixture<RoleClaimsWebApplicationFactory
         var tokens = await LoginAsync("admin", "Password123!");
         Assert.False(string.IsNullOrWhiteSpace(tokens.AccessToken));
         Assert.False(string.IsNullOrWhiteSpace(tokens.RefreshToken));
-        var oldAccessToken = tokens.AccessToken;
         var oldRefreshToken = tokens.RefreshToken;
         var refreshRequest = new RefreshRequest(RefreshToken: oldRefreshToken);
         
@@ -145,14 +143,14 @@ public class AuthControllerTests : IClassFixture<RoleClaimsWebApplicationFactory
     public async Task Logout_RevokesTokens_RefreshReturnsUnauthorized()
     {
         var tokens = await LoginAsync("admin", "Password123!");
-        Assert.False(string.IsNullOrWhiteSpace(tokens.AccessToken));
-        Assert.False(string.IsNullOrWhiteSpace(tokens.RefreshToken));
-        var logoutRequest = new LogoutRequest(RefreshToken: tokens.RefreshToken);
+        var authenticatedClient = _factory.CreateClient();
+        authenticatedClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
 
-        var logoutResponse = await _client.PostAsJsonAsync(LogoutRoute, logoutRequest);
+        var logoutResponse = await authenticatedClient.PostAsync(LogoutRoute, new StringContent(string.Empty));
         Assert.Equal(HttpStatusCode.OK, logoutResponse.StatusCode);
 
-        var refreshRequest = new RefreshRequest(RefreshToken: tokens.RefreshToken);
+        var refreshRequest = new RefreshRequest(tokens.RefreshToken);
         var response = await _client.PostAsJsonAsync(RefreshRoute, refreshRequest);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -175,7 +173,7 @@ public class AuthControllerTests : IClassFixture<RoleClaimsWebApplicationFactory
         
         var authenticatedClient = _factory.CreateClient();
         authenticatedClient.DefaultRequestHeaders.Authorization = 
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokens.AccessToken);
+            new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
         
         return authenticatedClient;
     }

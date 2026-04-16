@@ -119,16 +119,17 @@ public class AuthController : ControllerBase
     /// </summary>
     /// <param name="request">Logout request containing the refresh token.</param>
     /// <returns>Logout confirmation.</returns>
+    [Authorize]
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout(LogoutRequest request)
+    public async Task<IActionResult> Logout()
     {
-        var tokenHash = _tokenService.HashToken(request.RefreshToken);
+        var userName = User.Identity!.Name!;
+            
+        var user = await _userManager.FindByNameAsync(userName);
+        if (user == null)
+            return Unauthorized();
 
-        var token = await _refreshTokenService.GetValidTokenAsync(tokenHash);
-        if (token == null)
-            return Ok();
-
-        await _refreshTokenService.RevokeAllTokensForUserAsync(token.UserId);
+        await _refreshTokenService.RevokeAllTokensForUserAsync(user.Id);
 
         return Ok("Logged out");
     }
@@ -154,5 +155,3 @@ public class AuthController : ControllerBase
 
 public record LoginRequest(string Username, string Password);
 public record RefreshRequest(string RefreshToken);
-
-public record LogoutRequest(string RefreshToken);
