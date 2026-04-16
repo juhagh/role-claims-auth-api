@@ -1,6 +1,4 @@
-using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
-using RoleClaimsApp.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -31,22 +29,24 @@ public class TokenService
     }
 
     /// <summary>
-    /// Creates a signed JWT access token containing user claims and roles.
+    /// Creates a signed JWT access token containing user claims, roles and a unique token identifier (jti).
+    /// Each token is guaranteed to be unique even if issued within the same minute.
     /// </summary>
-    /// <param name="claims">Claims to embed in the token.</param>
-    /// <returns>Serialized JWT access token.</returns>
+    /// <param name="claims">Claims to embed in the token, typically including username, roles and custom claims.</param>
+    /// <returns>Serialized and signed JWT access token string.</returns>
     public string CreateAccessToken(IEnumerable<Claim> claims)
     {
         var key = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(_jwtKey));
-        
-        var accessMinutes = _accessTokenMinutes;
+
+        var jti = new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString());
+        claims = claims.Append(jti);
 
         var token = new JwtSecurityToken(
             issuer: _issuer,
             audience: _audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(accessMinutes),
+            expires: DateTime.UtcNow.AddMinutes(_accessTokenMinutes),
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
         );
 
@@ -54,14 +54,21 @@ public class TokenService
     }
 
     /// <summary>
-    /// Generates a cryptographically strong random refresh token.
+    /// Generates a cryptographically secure random refresh token using <see cref="RandomNumberGenerator"/>.
+    /// The returned value is base64-encoded and suitable for transmission to clients.
     /// </summary>
-    /// <returns>Opaque refresh token string.</returns>
+    /// <returns>Opaque, cryptographically strong refresh token string.</returns>
     public string GenerateRefreshToken()
     {
         return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
     }
 
+    /// <summary>
+    /// Computes a SHA-256 hash of the provided token string.
+    /// Used to avoid storing raw refresh tokens in the database.
+    /// </summary>
+    /// <param name="token">The raw token string to hash.</param>
+    /// <returns>Base64-encoded SHA-256 hash of the token.</returns>
     public string HashToken(string token)
     {
         return Convert.ToBase64String(

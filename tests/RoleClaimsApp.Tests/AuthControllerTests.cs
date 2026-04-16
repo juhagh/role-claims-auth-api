@@ -108,6 +108,7 @@ public class AuthControllerTests : IClassFixture<RoleClaimsWebApplicationFactory
         var tokens = await LoginAsync("admin", "Password123!");
         Assert.False(string.IsNullOrWhiteSpace(tokens.AccessToken));
         Assert.False(string.IsNullOrWhiteSpace(tokens.RefreshToken));
+        var oldAccessToken = tokens.AccessToken;
         var oldRefreshToken = tokens.RefreshToken;
         var refreshRequest = new RefreshRequest(RefreshToken: oldRefreshToken);
         
@@ -118,6 +119,7 @@ public class AuthControllerTests : IClassFixture<RoleClaimsWebApplicationFactory
         Assert.NotNull(newTokens);
         Assert.False(string.IsNullOrWhiteSpace(newTokens.AccessToken));
         Assert.False(string.IsNullOrWhiteSpace(newTokens.RefreshToken));
+        Assert.NotEqual(newTokens.AccessToken, oldAccessToken);
         Assert.NotEqual(newTokens.RefreshToken, oldRefreshToken);
     }
     
