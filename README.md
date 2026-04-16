@@ -9,7 +9,7 @@
 
 # RoleClaimsApp
 
-An ASP.NET Core Web API that demonstrates authentication and authorization patterns commonly used in real backend systems, including JWT access tokens, refresh token rotation, ASP.NET Core Identity, and policy-based access control using roles and claims.
+An ASP.NET Core Web API demonstrating authentication and authorization patterns commonly used in real backend systems, including JWT access tokens, refresh token rotation, ASP.NET Core Identity, and policy-based access control using roles and claims.
 
 ---
 
@@ -19,130 +19,117 @@ This project focuses on backend auth concerns that go beyond basic `[Authorize]`
 
 Key areas covered include:
 
-- **JWT authentication** with short-lived access tokens
+- **JWT authentication** with short-lived access tokens and unique `jti` claim per token
 - **Refresh token rotation** with revocation and replacement tracking
 - **Secure refresh token storage** using SHA-256 hashing rather than storing raw tokens
 - **Policy-based authorization** for centrally managed role-based and claim-based access rules
 - **Correct API behavior** with `401 Unauthorized` and `403 Forbidden` handled appropriately for API clients
-- **Layered structure** with responsibilities separated across controllers, services, authorization policies, and data access
+- **Identity-based logout** using JWT claims to revoke all active sessions without requiring the client to send a refresh token
+- **Fully containerised** with Docker Compose for one-command local setup
+- **Automated integration tests** covering the full auth and token lifecycle
 
 ---
 
 ## What This Project Demonstrates
 
-This project was built to practice authentication and authorization patterns that are relevant in real backend applications.
-
-- **Access token + refresh token flow**  
+- **Access token + refresh token flow**
   Users authenticate with username and password, receive a short-lived JWT access token for API calls, and use a refresh token to obtain a new access token when needed.
 
-- **Refresh token rotation**  
+- **Refresh token rotation**
   Each refresh request issues a new refresh token and revokes the previous one. This reduces the value of a stolen refresh token and makes token misuse easier to detect.
 
-- **Hashed refresh token storage**  
-  Refresh tokens are hashed with SHA-256 before being persisted. The raw token is only returned to the client and is never stored directly in the database.
+- **Unique token identity via jti**
+  Every access token includes a `jti` (JWT ID) claim — a `Guid` generated at issuance. This guarantees token uniqueness even when issued within the same minute.
 
-- **Role-based and claim-based authorization**  
-  Access rules are defined centrally as policies and then applied to endpoints. This keeps authorization logic consistent and easier to maintain.
+- **Hashed refresh token storage**
+  Refresh tokens are hashed with SHA-256 before being persisted. The raw token is only returned to the client and never stored directly in the database.
 
-- **API-friendly auth behavior**  
+- **Role-based and claim-based authorization**
+  Access rules are defined centrally as policies and applied to endpoints. This keeps authorization logic consistent and easier to maintain.
+
+- **API-friendly auth behavior**
   The application is configured for API consumers, so unauthorized and forbidden requests return proper HTTP status codes rather than redirecting to login pages.
 
-- **Service separation**  
+- **Service separation**
   JWT generation and cryptographic operations are separated from refresh token persistence and lifecycle handling, making the design easier to test and reason about.
 
 ---
 
 ## Tech Stack
 
-- **Framework:** ASP.NET Core (.NET 9)
+- **Framework:** ASP.NET Core (.NET 10)
 - **Authentication:** ASP.NET Core Identity + JWT Bearer
 - **Authorization:** Policy-based authorization with roles and claims
 - **Database:** PostgreSQL
 - **ORM:** Entity Framework Core with Npgsql
 - **Security:** `System.Security.Cryptography` (`RandomNumberGenerator`, `SHA256`)
+- **Testing:** xUnit, `WebApplicationFactory`
+- **Infrastructure:** Docker, Docker Compose
+- **CI:** GitHub Actions
 
 ---
 
 ## Project Structure
 
 ```text
-RoleClaimsApp/
-├── Authorization/              # Centralized authorization policies
-├── Controllers/
-│   ├── Admin/                  # Admin-only management endpoints
-│   ├── AuthController.cs       # Login, refresh, logout
-│   └── ProtectedUsersController.cs
-├── Data/
-│   ├── ApplicationDbContext.cs
-│   └── IdentitySeeder.cs       # Seeds default admin user, role, and claim
-├── Migrations/                 # EF Core migrations
-├── Models/
-│   ├── ApplicationUser.cs      # Extended Identity user
-│   └── RefreshToken.cs         # Refresh token entity with revocation metadata
-└── Security/
-    ├── TokenService.cs         # JWT creation, token generation, hashing
-    └── RefreshTokenService.cs  # Token validation, rotation, revocation
+src/
+  RoleClaimsApp/
+    Authorization/              # Centralized authorization policies
+    Controllers/
+      Admin/                    # Admin-only management endpoints
+      AuthController.cs         # Login, refresh, logout
+      ProtectedUsersController.cs
+    Data/
+      ApplicationDbContext.cs
+      IdentitySeeder.cs         # Seeds default users, roles, and claims
+    Migrations/                 # EF Core migrations
+    Models/
+      ApplicationUser.cs        # Extended Identity user
+      RefreshToken.cs           # Refresh token entity with revocation metadata
+    Security/
+      TokenService.cs           # JWT creation, token generation, hashing
+      RefreshTokenService.cs    # Token validation, rotation, revocation
+
+tests/
+  RoleClaimsApp.Tests/
+    AuthControllerTests.cs      # Integration tests for auth and token lifecycle
+    RoleClaimsWebApplicationFactory.cs
+    Models/
+      JwtResponse.cs
 ```
 
 ---
 
-## Configuration
+## Running Locally
 
 ### Prerequisites
-- .NET 9 SDK
 
-- PostgreSQL running locally
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
-### Secrets
-
-The JWT signing key is **not committed to source control.**
-
-For local development, provide it through environment variables or user secrets.
+### Start the full stack
 
 ```bash
-# Windows (PowerShell)
-$env:Jwt__Key="YOUR_DEV_SECRET_KEY"
-
-# Linux / macOS
-export Jwt__Key="YOUR_DEV_SECRET_KEY"
+docker-compose up -d
 ```
 
-The value in `appsettings.json` should only be a placeholder that documents the required configuration.
+This starts PostgreSQL and the API. Database migrations and user seeding are applied automatically on startup. The API is available at `http://localhost:8080`.
 
-Example development configuration:
+### Running without Docker (development)
 
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Database=roleclaimsdb;Username=youruser;Password=yourpassword"
-  },
-  "Jwt": {
-    "Key": "your-secret-key-at-least-32-characters-long",
-    "Issuer": "RoleClaimsApp",
-    "Audience": "RoleClaimsApp",
-    "AccessTokenMinutes": 10,
-    "RefreshTokenDays": 7
-  }
-}
+```bash
+docker-compose up -d postgres-dev
+dotnet ef database update --project src/RoleClaimsApp/RoleClaimsApp.csproj
+dotnet run --project src/RoleClaimsApp
 ```
-
 
 ---
 
-## Running the Application
+## Seeded Users
 
-Apply migrations and start the API:
-
-```bash
-dotnet ef database update
-dotnet run
-```
-
-On startup, the application seeds a default admin user for local testing:
-
-| Username | Password     | Role  | Claims          |
-|----------|--------------|-------|-----------------|
-| admin    | Password123! | Admin | Department=IT   |
+| Username | Password     | Role  | Claims        |
+|----------|--------------|-------|---------------|
+| admin    | Password123! | Admin | Department=IT |
+| user     | Password123! | —     | —             |
 
 ---
 
@@ -150,26 +137,25 @@ On startup, the application seeds a default admin user for local testing:
 
 ### Authentication
 
-| Method | Endpoint          | Auth Required | Description                                         |
-|--------|-------------------|----------------|-----------------------------------------------------|
-| POST   | /api/auth/login   | No             | Authenticate and receive access and refresh tokens  |
-| POST   | /api/auth/refresh | No             | Rotate the refresh token and issue a new access token |
-| POST   | /api/auth/logout  | No             | Revoke active refresh tokens for the user           |
-
+| Method | Endpoint           | Auth Required | Description                                        |
+|--------|--------------------|---------------|----------------------------------------------------|
+| POST   | /api/auth/login    | No            | Authenticate and receive access and refresh tokens |
+| POST   | /api/auth/refresh  | No            | Rotate the refresh token and issue a new access token |
+| POST   | /api/auth/logout   | Yes           | Revoke all active refresh tokens for the current user |
 
 ### Protected Endpoints
 
-| Method | Endpoint                 | Requirement            | Description                     |
-|--------|---------------------------|-------------------------|---------------------------------|
-| GET    | /api/users/admin         | Role: Admin            | Example of role-based access    |
-| GET    | /api/users/it            | Claim: Department=IT   | Example of claim-based access   |
-| DELETE | /api/users/claims/department | Role: Admin        | Remove Department claim from admin user |
+| Method | Endpoint                     | Requirement          | Description                       |
+|--------|------------------------------|----------------------|-----------------------------------|
+| GET    | /api/users/admin             | Role: Admin          | Example of role-based access      |
+| GET    | /api/users/it                | Claim: Department=IT | Example of claim-based access     |
+| DELETE | /api/users/claims/department | Role: Admin          | Remove Department claim from admin user |
 
 ### Admin User Management
 
-| Method | Endpoint                               | Requirement | Description          |
-|--------|------------------------------------------|-------------|----------------------|
-| POST   | /api/admin/users/{username}/claims       | Role: Admin | Add a claim to a user |
+| Method | Endpoint                         | Requirement | Description           |
+|--------|----------------------------------|-------------|-----------------------|
+| POST   | /api/admin/users/{username}/claims | Role: Admin | Add a claim to a user |
 
 ### Example Login Request
 
@@ -189,13 +175,34 @@ On startup, the application seeds a default admin user for local testing:
 }
 ```
 
-### Example Add Claim Request
+---
 
-```json
-{
-  "type": "Department",
-  "value": "IT"
-}
+## Testing
+
+Integration tests cover the full authentication and authorization lifecycle using `WebApplicationFactory` against a real PostgreSQL test database.
+
+### Test coverage includes
+
+- login with valid credentials returns access and refresh tokens
+- login with wrong password returns 401
+- login with non-existent user returns 401
+- role-protected endpoint grants access to admin user
+- role-protected endpoint returns 403 for user without role
+- claim-protected endpoint grants access to user with correct claim
+- claim-protected endpoint returns 403 for user without claim
+- unauthenticated request returns 401
+- refresh token rotation returns new unique tokens
+- used refresh token returns 401 on reuse
+- logout revokes all tokens — subsequent refresh returns 401
+
+### Running tests
+
+```bash
+# Start the test database first
+docker compose up -d postgres-test
+
+# Run tests
+dotnet test
 ```
 
 ---
@@ -210,9 +217,17 @@ If raw refresh tokens are stored in the database and the database is compromised
 
 Refresh token rotation makes each refresh token single-use. When a token is exchanged, it is revoked and replaced with a new one. This reduces replay risk and gives better visibility into suspicious reuse attempts.
 
+### Why add a jti claim?
+
+The `jti` (JWT ID) is a standard JWT claim that uniquely identifies each token. Without it, two tokens issued to the same user within the same minute could be identical, making it impossible to distinguish them for auditing or revocation purposes.
+
+### Why use identity-based logout?
+
+The logout endpoint uses `[Authorize]` and reads the user identity from the JWT rather than requiring the client to send a refresh token. This is cleaner for API consumers and ensures only authenticated users can trigger a logout.
+
 ### Why track ReplacedByTokenId?
 
-Tracking replacement relationships allows the token chain to be reconstructed. That can be useful for debugging, auditing, and reasoning about token history for a given session.
+Tracking replacement relationships allows the token chain to be reconstructed for debugging, auditing, and reasoning about token history for a given session.
 
 ### Why separate TokenService and RefreshTokenService?
 
@@ -224,38 +239,13 @@ Centralized policies keep authorization rules in one place. That makes the appli
 
 ---
 
-## Testing
-
-This project was tested with API requests covering the main authentication and authorization flows, including:
- - successful login and token issuance
- - refresh token rotation
- - rejection of revoked refresh tokens
- - role-protected endpoint access
- - claim-protected endpoint access
- - logout revoking active refresh tokens
-
----
-
-## What I Learned
-
-This project helped reinforce several backend development concepts:
- - how ASP.NET Core Identity and JWT Bearer authentication fit together
- - the difference between authentication and authorization
- - how refresh token lifecycle management differs from access token validation
- - how to structure auth-related concerns into smaller, testable services
- - why API authentication behavior should differ from browser-oriented MVC defaults
-
----
-
 ## Limitations and Possible Improvements
 
-This is a portfolio and learning project, not a production-ready identity platform. Some useful next improvements would be:
- - refresh token reuse detection with stronger compromise handling
- - rate limiting and login lockout protections
- - audit logging for security-sensitive actions
- - email confirmation and password reset flows
- - Docker-based local environment setup
- - automated integration tests for the full auth flow
+- refresh token reuse detection with stronger compromise handling
+- rate limiting and login lockout protections
+- audit logging for security-sensitive actions
+- email confirmation and password reset flows
+- full user management endpoints (list, create, delete users)
 
 ---
 
