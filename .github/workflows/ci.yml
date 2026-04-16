@@ -32,7 +32,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 9.0.x
+          dotnet-version: 10.0.x
 
       - name: Add .NET tools to PATH
         run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
@@ -54,4 +54,4 @@ jobs:
           Jwt__Audience: RoleClaimsAppClient
           Jwt__AccessTokenMinutes: 10
           Jwt__RefreshTokenDays: 7
-        run: dotnet ef database update --project RoleClaimsApp.csproj
+        run: dotnet ef database update --project src/RoleClaimsApp/RoleClaimsApp.csproj
